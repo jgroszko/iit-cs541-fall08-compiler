@@ -24,11 +24,11 @@ int main(int argc, char ** argv)
     }
     else if((val & char_mask) == char_tag)
     {
-	printf("%c\n", val >> char_shift);
+	printf("#\\%c\n", val >> char_shift);
     }
     else if((val & bool_mask) == bool_tag)
     {
-	printf("%i\n", val >> bool_shift);
+	printf( (val >> bool_shift) ? "#t\n" : "#f\n" );
     }
     else if(val == empty_list)
     {
