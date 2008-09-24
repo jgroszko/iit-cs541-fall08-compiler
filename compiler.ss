@@ -61,6 +61,19 @@
   (emit-expr arg)
   (emit "addl $~s, %eax" (immediate-rep 1)))
 
+(define-primitive ($sub1 arg)
+  (emit-expr arg)
+  (emit "subl $~s, %eax" (immediate-rep 1)))
+
+(define-primitive ($integer->char arg)
+  (emit-expr arg)
+  (emit "sall $6, %eax")
+  (emit "addl $15, %eax"))
+
+(define-primitive ($char->integer arg)
+  (emit-expr arg)
+  (emit "sarl $6, %eax"))
+
 ; --- Immediate Constants ---
 
 (define fixnum-shift 2)
