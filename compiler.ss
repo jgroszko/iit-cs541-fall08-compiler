@@ -6,6 +6,7 @@
 (require "tests-3.1.ss")
 (require "tests-3.2.ss")
 (require "tests-3.3.ss")
+(require "tests-3.4.ss")
 
 ; --- Boilerplate ---
 
@@ -31,7 +32,9 @@
      (begin
        (putprop 'prim-name '*is-prim* #t)
        (putprop 'prim-name '*arg-count*
-		(length '(arg* ...)))
+		(if (= (length '(arg* ...)) 1)
+		    1
+		    (sub1 (length '(arg* ...)))))
        (putprop 'prim-name '*emitter*
 		(lambda (arg* ...) b b* ...)))]))
 
@@ -51,10 +54,12 @@
 	  #t)
       (error "check-primcall-args" "not a primitive" prim)))
 
-(define (emit-primcall expr)
+(define (emit-primcall expr stack-pointer)
   (let ([prim (car expr)] [args (cdr expr)])
     (if (check-primcall-args prim args)
-	(apply (primitive-emitter prim) args)
+	(if (= (getprop prim '*arg-count*) 1)
+	    (apply (primitive-emitter prim) args)
+	    (apply (primitive-emitter prim) stack-pointer args))
 	(error "emit-primcall" "incorrect arguments"))))
 
 (define-primitive ($add1 arg)
@@ -116,6 +121,12 @@
   (emit "sall $7, %eax")
   (emit "orl $31, %eax"))
 
+(define-primitive ($+ stack-pointer x y)
+  (emit-expr x stack-pointer)
+  (emit "movl %eax, ~s(%esp)" stack-pointer)
+  (emit-expr y (- stack-pointer 4))
+  (emit "addl ~s(%esp), %eax" stack-pointer))
+
 ; --- Immediate Constants ---
 
 (define fixnum-shift 2)
@@ -141,10 +152,10 @@
 (define (emit-immediate expr)
   (emit "movl $~s, %eax" (immediate-rep expr)))
 
-(define (emit-expr expr)
+(define (emit-expr expr [stack-pointer -4])
   (cond
    [(immediate? expr) (emit-immediate expr)]
-   [(primcall? expr) (emit-primcall expr)]
+   [(primcall? expr) (emit-primcall expr stack-pointer)]
    [else (error "don't know how to emit that!" expr)]))
 
 ; --- Actual Compiler ---
