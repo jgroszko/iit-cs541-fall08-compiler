@@ -41,3 +41,37 @@
 			      [($char->integer #\0) => "48"]
 			      [($char->integer #\9) => "57"]			      
 			      )
+
+(add-tests-with-string-output "zero?"
+			      [($zero? 0) => "#t"]
+			      [($zero? 1) => "#f"]
+			      [($zero? #\A) => "#f"])
+
+(add-tests-with-string-output "null?"
+			      [($null? ()) => "#t"]
+			      [($null? 1) => "#f"]
+			      [($null? #\A) => "#f"])
+
+(add-tests-with-string-output "not"
+			      [($not #t) => "#f"]
+			      [($not #f) => "#t"]
+			      [($not ()) => "#f"]
+			      [($not 1) => "#f"]
+			      [($not #\A) => "#f"])
+
+(add-tests-with-string-output "integer?"
+			      [($integer? #t) => "#f"]
+			      [($integer? #f) => "#f"]
+			      [($integer? ()) => "#f"]
+			      [($integer? 1) => "#t"]
+			      [($integer? 10) => "#t"]
+			      [($integer? #\A) => "#f"])
+
+(add-tests-with-string-output "boolean?"
+			      [($boolean? #t) => "#t"]
+			      [($boolean? #f) => "#t"]
+			      [($boolean? ()) => "#f"]
+			      [($boolean? 1) => "#f"]
+			      [($boolean? 10) => "#f"]
+			      [($boolean? #\A) => "#f"])
+			      

@@ -4,7 +4,7 @@
 
 (require "helper.ss")
 (require "tests-3.1.ss")
-;(require "tests-3.2.ss")
+(require "tests-3.2.ss")
 (require "tests-3.3.ss")
 
 ; --- Boilerplate ---
@@ -73,6 +73,48 @@
 (define-primitive ($char->integer arg)
   (emit-expr arg)
   (emit "sarl $6, %eax"))
+
+(define-primitive ($zero? arg)
+  (emit-expr arg)
+  (emit "cmpl $0, %eax")
+  (emit "movl $0, %eax")
+  (emit "sete %al")
+  (emit "sall $7, %eax")
+  (emit "orl $31, %eax"))
+
+(define-primitive ($null? arg)
+  (emit-expr arg)
+  (emit "cmpl $47, %eax")
+  (emit "movl $0, %eax")
+  (emit "sete %al")
+  (emit "sall $7, %eax")
+  (emit "orl $31, %eax"))
+
+(define-primitive ($not arg)
+  (emit-expr arg)
+  (emit "cmpl $31, %eax")
+  (emit "movl $0, %eax")
+  (emit "sete %al")
+  (emit "sall $7, %eax")
+  (emit "orl $31, %eax"))
+
+(define-primitive ($integer? arg)
+  (emit-expr arg)
+  (emit "andl $3, %eax")
+  (emit "cmpl $0, %eax")
+  (emit "movl $0, %eax")
+  (emit "sete %al")
+  (emit "sall $7, %eax")
+  (emit "orl $31, %eax"))
+
+(define-primitive ($boolean? arg)
+  (emit-expr arg)
+  (emit "andl $127, %eax")
+  (emit "cmpl $31, %eax")
+  (emit "movl $0, %eax")
+  (emit "sete %al")
+  (emit "sall $7, %eax")
+  (emit "orl $31, %eax"))
 
 ; --- Immediate Constants ---
 
