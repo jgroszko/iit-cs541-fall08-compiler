@@ -127,6 +127,31 @@
   (emit-expr y (- stack-pointer 4))
   (emit "addl ~s(%esp), %eax" stack-pointer))
 
+(define-primitive ($- stack-pointer x y)
+  (emit-expr x stack-pointer)
+  (emit "movl %eax, ~s(%esp)" stack-pointer)
+  (emit-expr (- y) (- stack-pointer 4))
+  (emit "addl ~s(%esp), %eax" stack-pointer))
+
+(define-primitive ($* stack-pointer x y)
+  (emit-expr x stack-pointer)
+  (emit "sarl $2, %eax")
+  (emit "movl %eax, ~s(%esp)" stack-pointer)
+  (emit-expr y (- stack-pointer 4))
+  (emit "sarl $2, %eax")
+  (emit "imull ~s(%esp)" stack-pointer)
+  (emit "sall $2, %eax"))
+
+(define-primitive ($= stack-pointer x y)
+  (emit-expr x stack-pointer)
+  (emit "movl %eax, ~s(%esp)" stack-pointer)
+  (emit-expr y (- stack-pointer 4))
+  (emit "cmpl ~s(%esp), %eax" stack-pointer)
+  (emit "movl $0, %eax")
+  (emit "sete %al")
+  (emit "sall $7, %eax")
+  (emit "orl $31, %eax"))
+
 ; --- Immediate Constants ---
 
 (define fixnum-shift 2)

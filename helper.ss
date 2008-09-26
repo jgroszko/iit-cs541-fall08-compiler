@@ -35,7 +35,7 @@
 		  (close-output-port p))))
 
 (define (build)
-  (unless (system "gcc -o stst driver.c stst.s")
+  (unless (system "gcc -g -gstabs -o stst driver.c stst.s")
 	  (error 'make "could not build target")))
 
 (define (execute)
