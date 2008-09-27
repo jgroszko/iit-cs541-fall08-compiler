@@ -3,9 +3,9 @@
 (require mzlib/compat)
 
 (require "helper.ss")
-(require "tests-3.1.ss")
-(require "tests-3.2.ss")
-(require "tests-3.3.ss")
+;(require "tests-3.1.ss")
+;(require "tests-3.2.ss")
+;(require "tests-3.3.ss")
 (require "tests-3.4.ss")
 
 ; --- Boilerplate ---
@@ -151,6 +151,57 @@
   (emit "sete %al")
   (emit "sall $7, %eax")
   (emit "orl $31, %eax"))
+
+(define-primitive ($!= stack-pointer x y)
+  (emit-expr x stack-pointer)
+  (emit "movl %eax, ~s(%esp)" stack-pointer)
+  (emit-expr y (- stack-pointer 4))
+  (emit "cmpl ~s(%esp), %eax" stack-pointer)
+  (emit "movl $0, %eax")
+  (emit "setne %al")
+  (emit "sall $7, %eax")
+  (emit "orl $31, %eax"))
+
+(define-primitive ($< stack-pointer x y)
+  (emit-expr x stack-pointer)
+  (emit "movl %eax, ~s(%esp)" stack-pointer)
+  (emit-expr y (- stack-pointer 4))
+  (emit "cmpl ~s(%esp), %eax" stack-pointer)
+  (emit "movl $0, %eax")
+  (emit "setg %al")
+  (emit "sall $7, %eax")
+  (emit "orl $31, %eax"))
+
+(define-primitive ($<= stack-pointer x y)
+  (emit-expr x stack-pointer)
+  (emit "movl %eax, ~s(%esp)" stack-pointer)
+  (emit-expr y (- stack-pointer 4))
+  (emit "cmpl ~s(%esp), %eax" stack-pointer)
+  (emit "movl $0, %eax")
+  (emit "setge %al")
+  (emit "sall $7, %eax")
+  (emit "orl $31, %eax"))
+
+(define-primitive ($> stack-pointer x y)
+  (emit-expr x stack-pointer)
+  (emit "movl %eax, ~s(%esp)" stack-pointer)
+  (emit-expr y (- stack-pointer 4))
+  (emit "cmpl ~s(%esp), %eax" stack-pointer)
+  (emit "movl $0, %eax")
+  (emit "setl %al")
+  (emit "sall $7, %eax")
+  (emit "orl $31, %eax"))
+
+(define-primitive ($>= stack-pointer x y)
+  (emit-expr x stack-pointer)
+  (emit "movl %eax, ~s(%esp)" stack-pointer)
+  (emit-expr y (- stack-pointer 4))
+  (emit "cmpl ~s(%esp), %eax" stack-pointer)
+  (emit "movl $0, %eax")
+  (emit "setle %al")
+  (emit "sall $7, %eax")
+  (emit "orl $31, %eax"))
+
 
 ; --- Immediate Constants ---
 
