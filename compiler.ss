@@ -8,6 +8,7 @@
 (require "tests-3.3.ss")
 (require "tests-3.4.ss")
 (require "tests-3.5.ss")
+(require "tests-3.6.ss")
 
 ; --- Boilerplate ---
 
@@ -203,6 +204,22 @@
   (emit "setle %al")
   (emit "sall $7, %eax")
   (emit "orl $31, %eax"))
+
+; --- Conditional Expressions ---
+
+(define (unique-label)
+  (format "label~s" (random 2000)))
+
+(define-primitive ($if environment stack-pointer test consequence alternative)
+  (let ((L0 (unique-label)) (L1 (unique-label)))
+    (emit-expr test environment stack-pointer)
+    (emit "cmpl $~s, %eax" (immediate-rep #f))
+    (emit (string-append "je " L0))
+    (emit-expr consequence environment stack-pointer)
+    (emit (string-append "jmp " L1))
+    (emit (string-append L0 ":"))
+    (emit-expr alternative environment stack-pointer)
+    (emit (string-append L1 ":"))))	  
 
 ; --- Let Expressions ---
 
