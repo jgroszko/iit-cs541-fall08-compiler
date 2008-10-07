@@ -9,6 +9,7 @@
 (require "tests-3.4.ss")
 (require "tests-3.5.ss")
 (require "tests-3.6.ss")
+(require "tests-3.7.ss")
 
 ; --- Boilerplate ---
 
@@ -18,8 +19,9 @@
   (emit ".p2align 4,,15")
   (emit ".globl scheme_entry")
   (emit ".type scheme_entry, @function")
-  (emit "scheme_entry:"))
-
+  (emit "scheme_entry:")
+  ; Set up heap pointer
+  (emit "movl 4(%esp), %esi"))
 
 (define (emit-footer)
   (emit "ret")
@@ -244,6 +246,33 @@
 	   (cons (cons (car b) si) new-env)
 	   (- si 4)))))))
 
+; --- Heap Allocation ---
+
+(define pair-tag 1) ; 0x1
+
+(define pair-size 8)
+
+(define-primitive ($cons environment stack-pointer first second)
+  (emit "/* Save heap spot */")
+  (emit "movl %esi, ~a(%esp)" stack-pointer)
+  (emit "addl $8, %esi")
+
+  (emit "/* Call first */")
+  (emit-expr first environment (- stack-pointer 4))
+  (emit "/* Save first to heap */")
+  (emit "movl ~a(%esp), %ebx" stack-pointer)
+  (emit "movl %eax, 0(%ebx)")
+
+  (emit "/* Call second */")
+  (emit-expr second environment (- stack-pointer 4))
+  (emit "/* Save second to heap */")
+  (emit "movl ~a(%esp), %ebx" stack-pointer)
+  (emit "movl %eax, 4(%ebx)")
+
+  (emit "/* Create pointer to pair */")
+  (emit "movl ~a(%esp), %eax" stack-pointer)
+  (emit "orl $~s, %eax" pair-tag))
+
 ; --- Immediate Constants ---
 
 (define fixnum-shift 2)
@@ -270,6 +299,7 @@
   (emit "movl $~s, %eax" (immediate-rep expr)))
 
 (define (emit-expr expr [env '()] [stack-pointer -4])
+  (emit "/* emit ~s stack ~s */" expr stack-pointer)
   (cond
    [(immediate? expr) (emit-immediate expr)]
    [(variable? expr env) (emit "movl ~a(%esp), %eax" (cdr (assoc expr env)))]

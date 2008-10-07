@@ -1,5 +1,9 @@
 /* a simple driver for scheme_entry */
 #include <stdio.h>
+#include <stdlib.h>
+
+#define pair_mask 0x7
+#define pair_tag  0x1
 
 #define fixnum_mask  0x3
 #define fixnum_tag   0x0
@@ -15,24 +19,48 @@
 
 #define empty_list   0x2F
 
-int main(int argc, char ** argv)
+#define word_size 8
+#define heap_size word_size*32 // 32 words should be enough for anybody
+
+void print_result(int val)
 {
-    int val = scheme_entry();
-    if((val & fixnum_mask) == fixnum_tag)
+    if((val & pair_mask) == pair_tag)
     {
-	printf("%d\n", val >> fixnum_shift);
+	int first = *(int*)(val-1);
+	int second = *(int*)(val+3);
+
+	printf("(");
+	print_result(first);
+	printf(" . ");
+	print_result(second);
+	printf(")");
+    }
+    else if((val & fixnum_mask) == fixnum_tag)
+    {
+	printf("%d", val >> fixnum_shift);
     }
     else if((val & char_mask) == char_tag)
     {
-	printf("#\\%c\n", val >> char_shift);
+	printf("#\\%c", val >> char_shift);
     }
     else if((val & bool_mask) == bool_tag)
     {
-	printf( (val >> bool_shift) ? "#t\n" : "#f\n" );
+	printf( (val >> bool_shift) ? "#t" : "#f" );
     }
     else if(val == empty_list)
     {
-	printf("()\n");
+	printf("()");
     }
+}
+
+int main(int argc, char ** argv)
+{
+    void* heap = malloc(heap_size);
+    int val = scheme_entry(heap);
+    print_result(val);
+    printf("\n");
+
+    free(heap);
+
     return 0;
 }
