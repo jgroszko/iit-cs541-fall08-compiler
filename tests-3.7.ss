@@ -13,14 +13,14 @@
 )
 
 (add-tests-with-string-output "cons"
-;  [($pair? ($cons 1 2)) => "#t"]    
-;  [($pair? 12) => "#f"]            
-;  [($pair? #t) => "#f"]            
-;  [($pair? #f) => "#f"]            
-;  [($pair? ()) => "#f"]            
-;  [($fixnum? ($cons 12 43)) => "#f"]
-;  [($boolean? ($cons 12 43)) => "#f"]
-;  [($null? ($cons 12 43)) => "#f"]   
+  [($pair? ($cons 1 2)) => "#t"]    
+  [($pair? 12) => "#f"]            
+  [($pair? #t) => "#f"]            
+  [($pair? #f) => "#f"]            
+  [($pair? ()) => "#f"]            
+  [($integer? ($cons 12 43)) => "#f"]
+  [($boolean? ($cons 12 43)) => "#f"]
+  [($null? ($cons 12 43)) => "#f"]   
   [($not ($cons 12 43)) => "#f"]     
   [($if ($cons 12 43) 32 43) => "32"]
   [($car ($cons 1 23)) => "1"]       
