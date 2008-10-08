@@ -36,7 +36,7 @@
      (begin
        (putprop 'prim-name '*is-prim* #t)
        (putprop 'prim-name '*arg-count*
-		(if (= (length '(arg* ...)) 1)
+		(if (= (length '(arg* ...)) 2)
 		    1
 		    (- (length '(arg* ...)) 2)))
        (putprop 'prim-name '*emitter*
@@ -62,53 +62,53 @@
   (let ([prim (car expr)] [args (cdr expr)])
     (if (check-primcall-args prim args)
 	(if (= (getprop prim '*arg-count*) 1)
-	    (apply (primitive-emitter prim) args)
+	    (apply (primitive-emitter prim) environment args)
 	    (apply (primitive-emitter prim) environment stack-pointer args))
 	(error "emit-primcall" "incorrect arguments"))))
 
-(define-primitive ($add1 arg)
-  (emit-expr arg)
+(define-primitive ($add1 environment arg)
+  (emit-expr arg environment)
   (emit "addl $~s, %eax" (immediate-rep 1)))
 
-(define-primitive ($sub1 arg)
-  (emit-expr arg)
+(define-primitive ($sub1 environment arg)
+  (emit-expr arg environment)
   (emit "subl $~s, %eax" (immediate-rep 1)))
 
-(define-primitive ($integer->char arg)
-  (emit-expr arg)
+(define-primitive ($integer->char environment arg)
+  (emit-expr arg environment)
   (emit "sall $6, %eax")
   (emit "addl $15, %eax"))
 
-(define-primitive ($char->integer arg)
-  (emit-expr arg)
+(define-primitive ($char->integer environment arg)
+  (emit-expr arg environment)
   (emit "sarl $6, %eax"))
 
-(define-primitive ($zero? arg)
-  (emit-expr arg)
+(define-primitive ($zero? environment arg)
+  (emit-expr arg environment)
   (emit "cmpl $0, %eax")
   (emit "movl $0, %eax")
   (emit "sete %al")
   (emit "sall $7, %eax")
   (emit "orl $31, %eax"))
 
-(define-primitive ($null? arg)
-  (emit-expr arg)
+(define-primitive ($null? environment arg)
+  (emit-expr environment arg)
   (emit "cmpl $47, %eax")
   (emit "movl $0, %eax")
   (emit "sete %al")
   (emit "sall $7, %eax")
   (emit "orl $31, %eax"))
 
-(define-primitive ($not arg)
-  (emit-expr arg)
+(define-primitive ($not environment arg)
+  (emit-expr arg environment)
   (emit "cmpl $31, %eax")
   (emit "movl $0, %eax")
   (emit "sete %al")
   (emit "sall $7, %eax")
   (emit "orl $31, %eax"))
 
-(define-primitive ($integer? arg)
-  (emit-expr arg)
+(define-primitive ($integer? environment arg)
+  (emit-expr arg environment)
   (emit "andl $3, %eax")
   (emit "cmpl $0, %eax")
   (emit "movl $0, %eax")
@@ -116,8 +116,8 @@
   (emit "sall $7, %eax")
   (emit "orl $31, %eax"))
 
-(define-primitive ($boolean? arg)
-  (emit-expr arg)
+(define-primitive ($boolean? environment arg)
+  (emit-expr arg environment)
   (emit "andl $127, %eax")
   (emit "cmpl $31, %eax")
   (emit "movl $0, %eax")
@@ -273,6 +273,14 @@
   (emit "movl ~a(%esp), %eax" stack-pointer)
   (emit "orl $~s, %eax" pair-tag))
 
+(define-primitive ($car environment arg)
+  (emit-expr arg environment)
+  (emit "movl -1(%eax), %eax"))
+
+(define-primitive ($cdr environment arg)
+  (emit-expr arg environment)
+  (emit "movl 3(%eax), %eax"))
+
 ; --- Immediate Constants ---
 
 (define fixnum-shift 2)
@@ -299,7 +307,7 @@
   (emit "movl $~s, %eax" (immediate-rep expr)))
 
 (define (emit-expr expr [env '()] [stack-pointer -4])
-  (emit "/* emit ~s stack ~s */" expr stack-pointer)
+  (emit "/* emit: ~s stack: ~s environment: ~s */" expr stack-pointer env)
   (cond
    [(immediate? expr) (emit-immediate expr)]
    [(variable? expr env) (emit "movl ~a(%esp), %eax" (cdr (assoc expr env)))]
