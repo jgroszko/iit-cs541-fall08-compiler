@@ -3,13 +3,14 @@
 (require mzlib/compat)
 
 (require "helper.ss")
-(require "tests-3.1.ss")
-(require "tests-3.2.ss")
-(require "tests-3.3.ss")
-(require "tests-3.4.ss")
-(require "tests-3.5.ss")
-(require "tests-3.6.ss")
-(require "tests-3.7.ss")
+;(require "tests-3.1.ss")
+;(require "tests-3.2.ss")
+;(require "tests-3.3.ss")
+;(require "tests-3.4.ss")
+;(require "tests-3.5.ss")
+;(require "tests-3.6.ss")
+;(require "tests-3.7.ss")
+(require "tests-3.8.ss")
 
 ; --- Boilerplate ---
 
@@ -36,9 +37,7 @@
      (begin
        (putprop 'prim-name '*is-prim* #t)
        (putprop 'prim-name '*arg-count*
-		(if (= (length '(arg* ...)) 2)
-		    1
-		    (- (length '(arg* ...)) 2)))
+		    (- (length '(arg* ...)) 2))
        (putprop 'prim-name '*emitter*
 		(lambda (arg* ...) b b* ...)))]))
 
@@ -61,54 +60,52 @@
 (define (emit-primcall expr environment stack-pointer)
   (let ([prim (car expr)] [args (cdr expr)])
     (if (check-primcall-args prim args)
-	(if (= (getprop prim '*arg-count*) 1)
-	    (apply (primitive-emitter prim) environment args)
-	    (apply (primitive-emitter prim) environment stack-pointer args))
+	(apply (primitive-emitter prim) environment stack-pointer args)
 	(error "emit-primcall" "incorrect arguments"))))
 
-(define-primitive ($add1 environment arg)
+(define-primitive ($add1 environment stack-pointer arg)
   (emit-expr arg environment)
   (emit "addl $~s, %eax" (immediate-rep 1)))
 
-(define-primitive ($sub1 environment arg)
-  (emit-expr arg environment)
+(define-primitive ($sub1 environment stack-pointer arg)
+  (emit-expr arg environment stack-pointer)
   (emit "subl $~s, %eax" (immediate-rep 1)))
 
-(define-primitive ($integer->char environment arg)
-  (emit-expr arg environment)
+(define-primitive ($integer->char environment stack-pointer arg)
+  (emit-expr arg environment stack-pointer)
   (emit "sall $6, %eax")
   (emit "addl $15, %eax"))
 
-(define-primitive ($char->integer environment arg)
-  (emit-expr arg environment)
+(define-primitive ($char->integer environment stack-pointer arg)
+  (emit-expr arg environment stack-pointer)
   (emit "sarl $6, %eax"))
 
-(define-primitive ($zero? environment arg)
-  (emit-expr arg environment)
+(define-primitive ($zero? environment stack-pointer arg)
+  (emit-expr arg environment stack-pointer)
   (emit "cmpl $0, %eax")
   (emit "movl $0, %eax")
   (emit "sete %al")
   (emit "sall $7, %eax")
   (emit "orl $31, %eax"))
 
-(define-primitive ($null? environment arg)
-  (emit-expr arg environment)
+(define-primitive ($null? environment stack-pointer arg)
+  (emit-expr arg environment stack-pointer)
   (emit "cmpl $47, %eax")
   (emit "movl $0, %eax")
   (emit "sete %al")
   (emit "sall $7, %eax")
   (emit "orl $31, %eax"))
 
-(define-primitive ($not environment arg)
-  (emit-expr arg environment)
+(define-primitive ($not environment stack-pointer arg)
+  (emit-expr arg environment stack-pointer)
   (emit "cmpl $31, %eax")
   (emit "movl $0, %eax")
   (emit "sete %al")
   (emit "sall $7, %eax")
   (emit "orl $31, %eax"))
 
-(define-primitive ($integer? environment arg)
-  (emit-expr arg environment)
+(define-primitive ($integer? environment stack-pointer arg)
+  (emit-expr arg environment stack-pointer)
   (emit "andl $3, %eax")
   (emit "cmpl $0, %eax")
   (emit "movl $0, %eax")
@@ -116,8 +113,8 @@
   (emit "sall $7, %eax")
   (emit "orl $31, %eax"))
 
-(define-primitive ($boolean? environment arg)
-  (emit-expr arg environment)
+(define-primitive ($boolean? environment stack-pointer arg)
+  (emit-expr arg environment stack-pointer)
   (emit "andl $127, %eax")
   (emit "cmpl $31, %eax")
   (emit "movl $0, %eax")
@@ -125,8 +122,8 @@
   (emit "sall $7, %eax")
   (emit "orl $31, %eax"))
 
-(define-primitive ($pair? environment arg)
-  (emit-expr arg environment)
+(define-primitive ($pair? environment stack-pointer arg)
+  (emit-expr arg environment stack-pointer)
   (emit "andl $7, %eax")
   (emit "cmpl $1, %eax")
   (emit "movl $0, %eax")
@@ -246,7 +243,10 @@
 (define (emit-let bindings body env si)
   (let f ((b* bindings) (new-env env) (si si))
     (cond
-     ((null? b*) (emit-expr body new-env si))
+     ((null? b*)   
+      (for-each (lambda (body-element)
+		  (emit-expr body-element new-env si))
+		body))
      (else
       (let ((b (car b*)))
 	(emit-expr (cadr b) env si)
@@ -255,7 +255,7 @@
 	   (cons (cons (car b) si) new-env)
 	   (- si 4)))))))
 
-; --- Heap Allocation ---
+; --- Pairs ---
 
 (define pair-tag 1) ; 0x1
 
@@ -282,13 +282,50 @@
   (emit "movl ~a(%esp), %eax" stack-pointer)
   (emit "orl $~s, %eax" pair-tag))
 
-(define-primitive ($car environment arg)
-  (emit-expr arg environment)
+(define-primitive ($car environment stack-pointer arg)
+  (emit-expr arg environment stack-pointer)
   (emit "movl -1(%eax), %eax"))
 
-(define-primitive ($cdr environment arg)
-  (emit-expr arg environment)
+(define-primitive ($cdr environment stack-pointer arg)
+  (emit-expr arg environment stack-pointer)
   (emit "movl 3(%eax), %eax"))
+
+; --- Vectors ---
+
+(define vector-tag 2) ; 0x2
+
+(define-primitive ($make-vector environment stack-pointer size)
+  (emit "/* Vector Size */")
+  (emit-expr size environment stack-pointer)
+
+  (emit "/* Save size to heap */")
+  (emit "movl %eax, 0(%esi)")
+
+  (emit "/* Pad the vector's size */")
+  (emit "addl $11, %eax")
+  (emit "andl $-8, %eax")
+
+  (emit "/* Save heap spot */")
+  (emit "movl %esi, ~a(%esp)" stack-pointer)
+
+  (emit "/* Increment heap pointer */")
+  (emit "sarl $~s, %eax" fixnum-shift) ; Convert back to an actual number
+  (emit "addl %eax, %esi")
+
+  (emit "/* Create pointer to pair */")
+  (emit "movl ~a(%esp), %eax" stack-pointer)
+  (emit "orl $~s, %eax" vector-tag))
+
+(define-primitive ($vector-set! environment stack-pointer vector index expr)
+  (emit "/* set-vector! */")
+  (emit-expr vector environment stack-pointer)
+  (emit "/* subtract tag */")
+  (emit "subl $2, %eax") ; Subtract tag
+  (emit "movl %eax, ~a(%esp)" stack-pointer)
+  (emit-expr expr environment (- stack-pointer 4))
+  (emit "movl ~a(%esp), %ebx" stack-pointer)
+  (emit "movl %eax, ~s(%ebx)" (* (add1 index) 4)))
+  
 
 ; --- Immediate Constants ---
 
@@ -320,7 +357,7 @@
   (cond
    [(immediate? expr) (emit-immediate expr)]
    [(variable? expr env) (emit "movl ~a(%esp), %eax" (cdr (assoc expr env)))]
-   [(let? expr) (emit-let (cadr expr) (caddr expr) env stack-pointer)]
+   [(let? expr) (emit-let (cadr expr) (cddr expr) env stack-pointer)]
    [(primcall? expr) (emit-primcall expr env stack-pointer)]
    [else (error "don't know how to emit that!" expr)]))
 

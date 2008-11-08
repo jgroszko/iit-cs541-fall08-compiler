@@ -2,6 +2,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define vector_mask 0x7
+#define vector_tag  0x2
+
 #define pair_mask 0x7
 #define pair_tag  0x1
 
@@ -24,7 +27,28 @@
 
 void print_result(int val)
 {
-    if((val & pair_mask) == pair_tag)
+    if((val & vector_mask) == vector_tag)
+    {
+	int size = *(int*)(val-2);
+	size = size >> fixnum_shift;
+
+	printf("#(");
+
+	int element = *(int*)(val+2);
+	print_result(element);
+
+	int i;
+	for(i = 1; i < size; i++)
+	{
+	    element = *(int*)(val+(4*i)+2);
+
+	    printf(" . ");
+	    print_result(element);
+	}
+
+	printf(")");
+    }
+    else if((val & pair_mask) == pair_tag)
     {
 	int first = *(int*)(val-1);
 	int second = *(int*)(val+3);
