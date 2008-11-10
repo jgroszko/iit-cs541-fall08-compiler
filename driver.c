@@ -34,16 +34,19 @@ void print_result(int val)
 
 	printf("#(");
 
-	int element = *(int*)(val+2);
-	print_result(element);
-
-	int i;
-	for(i = 1; i < size; i++)
+	if(size != 0)
 	{
-	    element = *(int*)(val+(4*i)+2);
-
-	    printf(" . ");
+	    int element = *(int*)(val+2);
 	    print_result(element);
+
+	    int i;
+	    for(i = 1; i < size; i++)
+	    {
+		element = *(int*)(val+(4*i)+2);
+
+		printf(" . ");
+		print_result(element);
+	    }
 	}
 
 	printf(")");

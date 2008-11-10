@@ -131,6 +131,15 @@
   (emit "sall $7, %eax")
   (emit "orl $31, %eax"))
 
+(define-primitive ($vector? environment stack-pointer arg)
+  (emit-expr arg environment stack-pointer)
+  (emit "andl $7, %eax")
+  (emit "cmpl $2, %eax")
+  (emit "movl $0, %eax")
+  (emit "sete %al")
+  (emit "sall $7, %eax")
+  (emit "orl $31, %eax"))
+
 (define-primitive ($+ environment stack-pointer x y)
   (emit-expr x environment stack-pointer)
   (emit "movl %eax, ~s(%esp)" stack-pointer)
@@ -310,21 +319,35 @@
 
   (emit "/* Increment heap pointer */")
   (emit "sarl $~s, %eax" fixnum-shift) ; Convert back to an actual number
+  (emit "imull $4, %eax") ; Word size 4
   (emit "addl %eax, %esi")
 
   (emit "/* Create pointer to pair */")
   (emit "movl ~a(%esp), %eax" stack-pointer)
   (emit "orl $~s, %eax" vector-tag))
 
+(define-primitive ($vector-length environment stack-pointer vector)
+  (emit "/* vector-length */")
+  (emit-expr vector environment stack-pointer)
+  (emit "/* subtract tag */")
+  (emit "subl $2, %eax") ; Subtract tag
+  (emit "movl (%eax), %eax"))
+
 (define-primitive ($vector-set! environment stack-pointer vector index expr)
   (emit "/* set-vector! */")
   (emit-expr vector environment stack-pointer)
   (emit "/* subtract tag */")
   (emit "subl $2, %eax") ; Subtract tag
-  (emit "movl %eax, ~a(%esp)" stack-pointer)
+  (emit "movl %eax, ~a(%esp)" stack-pointer) ; Save base pointer
+  (emit-expr index environment (- stack-pointer 4))
+  (emit "sarl $~s, %eax" fixnum-shift)
+  (emit "addl $1, %eax")
+  (emit "imull $4, %eax")
+  (emit "addl ~a(%esp), %eax" stack-pointer)
+  (emit "movl %eax, ~a(%esp)" stack-pointer) ; Save destination pointer
   (emit-expr expr environment (- stack-pointer 4))
   (emit "movl ~a(%esp), %ebx" stack-pointer)
-  (emit "movl %eax, ~s(%ebx)" (* (add1 index) 4)))
+  (emit "movl %eax, (%ebx)"))
   
 
 ; --- Immediate Constants ---
