@@ -91,20 +91,13 @@
 
 (define (test-all compile-program)
   (parameterize ([compile-func compile-program])
-		(let f ([i 0] [ls all-tests])
-		  (if (null? ls)
-		      (printf "Passed all ~s tests\n" i)
-		      (let ([x (car ls)]
-			    [ls (cdr ls)])
-			(let ([test-name (car x)]
-			      [tests (cdr x)])
-			  (printf "Performing test ~s\n" test-name)
-			  (let g ([i i]
-				  [tests tests])
-			    (if (null? tests)
-				(f i ls)
-				((test-one test-name (car tests))
-				 (g (add1 i) (cdr tests)))))))))))
+		(for-each (lambda (tests)
+			    (let ((test-name (car tests)))
+			      (for-each (lambda (test)
+					  (test-one test-name test))
+					(cdr tests))))
+			    all-tests)))
+
 
 	      
 
