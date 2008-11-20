@@ -3,14 +3,15 @@
 (require mzlib/compat)
 
 (require "helper.ss")
-;(require "tests-3.1.ss")
-;(require "tests-3.2.ss")
-;(require "tests-3.3.ss")
-;(require "tests-3.4.ss")
-;(require "tests-3.5.ss")
-;(require "tests-3.6.ss")
-;(require "tests-3.7.ss")
+(require "tests-3.1.ss")
+(require "tests-3.2.ss")
+(require "tests-3.3.ss")
+(require "tests-3.4.ss")
+(require "tests-3.5.ss")
+(require "tests-3.6.ss")
+(require "tests-3.7.ss")
 (require "tests-3.8.ss")
+(require "tests-3.9.ss")
 
 ; --- Boilerplate ---
 
@@ -224,19 +225,19 @@
 
 ; --- Conditional Expressions ---
 
-(define (unique-label)
-  (format "label~s" (random 2000)))
+(define (unique-label [name "label"])
+  (gensym name))
 
 (define-primitive ($if environment stack-pointer test consequence alternative)
   (let ((L0 (unique-label)) (L1 (unique-label)))
     (emit-expr test environment stack-pointer)
     (emit "cmpl $~s, %eax" (immediate-rep #f))
-    (emit (string-append "je " L0))
+    (emit "je ~s" L0)
     (emit-expr consequence environment stack-pointer)
-    (emit (string-append "jmp " L1))
-    (emit (string-append L0 ":"))
+    (emit "jmp ~s" L1)
+    (emit "~s:" L0)
     (emit-expr alternative environment stack-pointer)
-    (emit (string-append L1 ":"))))	  
+    (emit "~s:" L1)))	  
 
 ; --- Let Expressions ---
 
@@ -348,7 +349,47 @@
   (emit-expr expr environment (- stack-pointer 4))
   (emit "movl ~a(%esp), %ebx" stack-pointer)
   (emit "movl %eax, (%ebx)"))
-  
+
+; --- Procedure Calls ---
+
+(define-primitive ($labels environment stack-pointer lvars expr)
+  (let ((jump-label (unique-label)))
+    (emit "jmp ~s" jump-label)
+    (for-each (lambda (lvar)
+		(let ((label (unique-label (car lvar))))
+		  (putprop (car lvar) '*label* label)
+		  (emit ".globl ~s" label)
+		  (emit ".type ~s, @function" label)
+		  (emit "~s:" label)
+		  (emit-expr (cadr lvar) '() -4)
+		  (emit "ret")
+		  (emit ".size ~s, .-~s" label label)))
+	      lvars)
+    (emit "~s:" jump-label)
+    (emit-expr expr environment stack-pointer)))
+
+(define-primitive ($code environment stack-pointer vars expr)
+  (let f ([vars vars] [new-env environment] [stack-pointer (* 4 (length vars))])
+    (cond
+     ((null? vars)
+      (emit-expr expr new-env stack-pointer))
+     (else
+      (f (cdr vars)
+	 (cons (cons (car vars) stack-pointer) new-env)
+	 (- stack-pointer 4))))))
+
+(define-primitive ($labelcall environment stack-pointer lvar args)
+  (let ((stack-increment (* 4 (length args))))
+    (emit "subl $~s, %esp" stack-increment)
+    (let f ([*args args] [stack-pointer stack-increment])
+      (cond
+       ((null? *args)
+	(emit "call ~s" (getprop lvar '*label*))
+	(emit "addl $~s, %esp" stack-increment))
+       (else
+	(emit-expr (car *args) environment (- stack-pointer 4))
+	(emit "movl %eax, ~s(%esp)" (- stack-pointer 4))
+	(f (cdr *args) (- stack-pointer 4)))))))
 
 ; --- Immediate Constants ---
 

@@ -53,8 +53,6 @@
 
 ; Testing
 
-(provide test-with-string-output)
-
 (define (test-with-string-output test-id expr expected-output)
   (run-compile expr)
   (build)
