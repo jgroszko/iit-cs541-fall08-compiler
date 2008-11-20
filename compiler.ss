@@ -3,14 +3,14 @@
 (require mzlib/compat)
 
 (require "helper.ss")
-(require "tests-3.1.ss")
-(require "tests-3.2.ss")
-(require "tests-3.3.ss")
-(require "tests-3.4.ss")
-(require "tests-3.5.ss")
-(require "tests-3.6.ss")
-(require "tests-3.7.ss")
-(require "tests-3.8.ss")
+;(require "tests-3.1.ss")
+;(require "tests-3.2.ss")
+;(require "tests-3.3.ss")
+;(require "tests-3.4.ss")
+;(require "tests-3.5.ss")
+;(require "tests-3.6.ss")
+;(require "tests-3.7.ss")
+;(require "tests-3.8.ss")
 (require "tests-3.9.ss")
 
 ; --- Boilerplate ---
@@ -361,7 +361,7 @@
 		  (emit ".globl ~s" label)
 		  (emit ".type ~s, @function" label)
 		  (emit "~s:" label)
-		  (emit-expr (cadr lvar) '() -4)
+		  (emit-expr (cadr lvar) environment stack-pointer)
 		  (emit "ret")
 		  (emit ".size ~s, .-~s" label label)))
 	      lvars)
@@ -369,10 +369,10 @@
     (emit-expr expr environment stack-pointer)))
 
 (define-primitive ($code environment stack-pointer vars expr)
-  (let f ([vars vars] [new-env environment] [stack-pointer (* 4 (length vars))])
+  (let f ([vars vars] [new-env '()] [stack-pointer (* 4 (length vars))])
     (cond
      ((null? vars)
-      (emit-expr expr new-env stack-pointer))
+      (emit-expr expr new-env -4))
      (else
       (f (cdr vars)
 	 (cons (cons (car vars) stack-pointer) new-env)
