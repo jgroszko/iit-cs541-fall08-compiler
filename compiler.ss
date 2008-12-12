@@ -391,6 +391,30 @@
 	(emit "movl %eax, ~s(%esp)" (- stack-pointer 4))
 	(f (cdr *args) (- stack-pointer 4)))))))
 
+(define-primitive ($closure environment stack-pointer vars)
+  (emit "movl %esi, ~s(%esp)" (- stack-pointer 4)) ; Put the heap pointer on the stack for later
+  (emit "addl $~s, %esi" (* (length vars) 4)) ; Allocate enough space for our closure
+  (let f ([vars vars] [i 0])
+    (cond
+     ((null? vars)
+      (emit "movl ~s(%esp), %eax" (- stack-pointer 4)))
+     (else
+      (emit-expr (car vars) environment (- stack-pointer 4))
+      (emit "movl %eax, ~s(%esi)" i)
+      (f (cdr vars) (+ i 4))))))
+
+
+(define-primitive ($lambda environment stack-pointer vars expr)
+  (let ((free-variables (let f ([body (flatten expr)])
+				     (cond
+				      ((null? body)
+				       '())
+				      ((variable? (car body) environment)
+				       (cons (car body) (f (cdr body))))
+				      (else
+				       (f (cdr body)))))))
+    (emit-expr (cons '$closure (cons free-variables '())) environment stack-pointer)))
+  
 ; --- Immediate Constants ---
 
 (define fixnum-shift 2)
